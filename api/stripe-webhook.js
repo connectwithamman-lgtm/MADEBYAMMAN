@@ -90,16 +90,28 @@ async function createShopifyOrder(session, eventId) {
   const customerName = session.customer_details?.name || session.shipping_details?.name || "";
   const nameParts = customerName.trim().split(/\s+/).filter(Boolean);
 
+  if (!Number.isInteger(session.amount_total) || session.amount_total <= 0 || !session.currency) {
+    throw new Error("Stripe Checkout session is missing a valid paid amount or currency");
+  }
+  const paidAmount = (session.amount_total / 100).toFixed(2);
+
   const order = {
     order: {
-      test: true,
+      test: false,
       financial_status: "paid",
       email: customerEmail,
       send_receipt: false,
       send_fulfillment_receipt: false,
       line_items: [{ variant_id: Number(variantId), quantity: 1 }],
-      note: "Paid using Stripe test mode. Created automatically by Made by Amman webhook.",
-      tags: "Stripe, Test Order, Made by Amman",
+      transactions: [{
+        kind: "sale",
+        status: "success",
+        amount: paidAmount,
+        currency: session.currency.toUpperCase(),
+        gateway: "Stripe"
+      }],
+      note: "Payment received through Stripe. Created automatically by Made by Amman.",
+      tags: "Stripe, Made by Amman",
       note_attributes: [
         { name: "stripe_event_id", value: eventId },
         { name: "stripe_checkout_session_id", value: session.id }
@@ -159,7 +171,10 @@ module.exports = async (req, res) => {
     }
 
     const session = event.data?.object;
-    if (!session || session.payment_status !== "paid") {
+    if (!event.livemode || !session?.livemode) {
+      return res.status(200).json({ received: true, ignored: true, reason: "Live payments only" });
+    }
+    if (session.payment_status !== "paid") {
       return res.status(200).json({ received: true, unpaid: true });
     }
 
