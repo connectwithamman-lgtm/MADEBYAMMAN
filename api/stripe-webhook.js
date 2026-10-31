@@ -170,3 +170,5 @@ module.exports = async (req, res) => {
     return res.status(500).json({ received: false, error: error.message });
   }
 };
+
+module.exports.config = { api: { bodyParser: false } };
