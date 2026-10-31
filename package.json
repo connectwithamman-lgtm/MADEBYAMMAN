@@ -1,0 +1,10 @@
+{
+  "name": "madebyamman-stripe-shopify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stripe test checkout webhook that creates test orders in Shopify",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {}
+}
