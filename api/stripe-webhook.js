@@ -24,8 +24,7 @@ function verifyStripeSignature(rawBody, signatureHeader, secret) {
   const expected = crypto.createHmac("sha256", secret).update(signedPayload).digest("hex");
   const expectedBuffer = Buffer.from(expected, "hex");
   const receivedBuffer = Buffer.from(parts.v1, "hex");
-  return expectedBuffer.length === receivedBuffer.length &&
-    crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
+  return expectedBuffer.length === receivedBuffer.length && crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
 async function getShopifyToken() {
@@ -69,7 +68,7 @@ async function createShopifyOrder(session, eventId) {
 
   const order = {
     order: {
-      test: true,
+      test: false,
       financial_status: "paid",
       email: customerEmail,
       send_receipt: false,
@@ -82,8 +81,8 @@ async function createShopifyOrder(session, eventId) {
         currency: session.currency.toUpperCase(),
         gateway: "Stripe"
       }],
-      note: "Test payment received through Stripe Test mode. Created automatically by Made by Amman.",
-      tags: "Stripe, Test Order, Made by Amman",
+      note: "Payment received through Stripe. Created automatically by Made by Amman.",
+      tags: "Stripe, Made by Amman",
       note_attributes: [
         { name: "stripe_event_id", value: eventId },
         { name: "stripe_checkout_session_id", value: session.id }
@@ -128,7 +127,7 @@ module.exports = async (req, res) => {
     if (event.type !== "checkout.session.completed") return res.status(200).json({ received: true, ignored: true });
     const session = event.data?.object;
     if (event.livemode || session?.livemode) {
-      return res.status(200).json({ received: true, ignored: true, reason: "Test payments only" });
+      return res.status(200).json({ received: true, ignored: true, reason: "Live payments only" });
     }
     if (session?.payment_status !== "paid") return res.status(200).json({ received: true, unpaid: true });
     const result = await createShopifyOrder(session, event.id);
