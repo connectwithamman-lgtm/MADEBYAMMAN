@@ -1,5 +1,19 @@
 const API_VERSION = "2026-10";
 
+async function readShopifyResponse(response, label) {
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    const preview = text.replace(/\s+/g, " ").slice(0, 180);
+    throw new Error(
+      `${label} returned non-JSON (HTTP ${response.status}, content-type: ${response.headers.get("content-type") || "unknown"}). Response begins: ${preview}`
+    );
+  }
+  return { data, response };
+}
+
 async function getShopifyToken() {
   const shop = process.env.SHOPIFY_SHOP;
   const clientId = process.env.SHOPIFY_CLIENT_ID;
@@ -19,7 +33,7 @@ async function getShopifyToken() {
     })
   });
 
-  const data = await response.json();
+  const { data } = await readShopifyResponse(response, "Shopify authentication");
   if (!response.ok || !data.access_token) {
     throw new Error(data.error_description || data.error || "Shopify token request failed");
   }
@@ -39,7 +53,7 @@ module.exports = async (req, res) => {
       `https://${shop}.myshopify.com/admin/api/${API_VERSION}/products.json?limit=10`,
       { headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" } }
     );
-    const data = await response.json();
+    const { data } = await readShopifyResponse(response, "Shopify products API");
 
     if (!response.ok) {
       return res.status(response.status).json({
